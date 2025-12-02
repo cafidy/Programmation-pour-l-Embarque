@@ -1,0 +1,65 @@
+/*
+ * LCD_4bits.ino
+ * Exemple : pilote un afficheur LCD HD44780 en mode 4 bits
+ * - Affiche "Bonjour" (ligne 1, colonne 3)
+ * - Affiche un chronomètre en secondes (ligne 2, colonne 5) basé sur millis()
+ *
+ * Connexions (conformes à LiquidCrystal myLCD(8,9,4,5,6,7) :
+ *  RS -> pin 8
+ *  E  -> pin 9
+ *  D4 -> pin 4
+ *  D5 -> pin 5
+ *  D6 -> pin 6
+ *  D7 -> pin 7
+ *
+ * R/W à la masse (lecture non utilisée)
+ */
+
+#include <LiquidCrystal.h>
+
+// instanciation de l'objet LCD : LiquidCrystal(rs, enable, d4, d5, d6, d7)
+LiquidCrystal myLCD(8, 9, 4, 5, 6, 7);
+
+void setup() {
+  // initialisation de l'afficheur : 16 colonnes, 2 lignes
+  myLCD.begin(16, 2);
+
+  // Affichage statique sur la première ligne
+  myLCD.clear();
+  myLCD.setCursor(3, 0); // colonne 3 (0-indexée), ligne 0
+  myLCD.print("Bonjour");
+}
+
+void loop() {
+  // Calcul des secondes écoulées depuis le démarrage (millis / 1000)
+  unsigned long seconds = millis() / 1000UL;
+
+  // On veut afficher le nombre de secondes à la colonne 5 de la ligne 2 (indexée 1)
+  // Pour ne pas laisser d'anciens caractères, on formate dans un buffer
+  char buf[6]; // suffisamment grand pour "xxxxx" + '\0'
+  // convertir seconds en chaîne décimale
+  // on met un maximum de 5 chiffres (jusqu'à 99999 s ~ 27 h) ; adapter si nécessaire
+  snprintf(buf, sizeof(buf), "%lu", seconds);
+
+  // Positionner le curseur et écrire le nombre puis effacer le reste de la zone si besoin
+  const uint8_t col = 5;
+  const uint8_t row = 1;
+  myLCD.setCursor(col, row);
+  myLCD.print(buf);
+
+  // Si la largeur max souhaitée est par exemple 5 caractères, on supprime les traces
+  // précédentes en imprimant des espaces si la représentation actuelle est plus courte.
+  // Ici on suppose qu'on affiche au plus 5 caractères (colonnes 5..9). Ajuster si besoin.
+  uint8_t printed_len = strlen(buf);
+  const uint8_t field_width = 5;
+  if (printed_len < field_width) {
+    // imprimer espaces pour effacer restes
+    for (uint8_t i = 0; i < (field_width - printed_len); ++i) {
+      myLCD.print(' ');
+    }
+  }
+
+  // Petite attente pour limiter la rafraîchissement (non bloquante vis-à-vis de millis(),
+  // mais évite d'écrire sans cesse sur le LCD). 200 ms est suffisant.
+  delay(200);
+}
